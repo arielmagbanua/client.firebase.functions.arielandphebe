@@ -20,7 +20,7 @@ rsvp.use(bodyParser.urlencoded({extended: false}));
 // Automatically allow cross-origin requests
 // rsvp.use(cors({ origin: true }));
 // endpoints
-rsvp.post('/send', (req, res) => {
+rsvp.post('/add', (req, res) => {
     let rsvpsCollection = db.collection('rsvps');
     let responseData = {
         message: "RSVP successfully added.",
