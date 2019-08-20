@@ -15,8 +15,8 @@ let db = admin.firestore();
  */
 const rsvp = express();
 // parse request body
-rsvp.use(bodyParser.json({ type: 'application/*+json' }));
 rsvp.use(bodyParser.urlencoded({extended: false}));
+rsvp.use(bodyParser.json());
 // Automatically allow cross-origin requests
 // rsvp.use(cors({ origin: true }));
 // endpoints
@@ -50,15 +50,25 @@ rsvp.post('/add', (req, res) => {
         }
     });
 
+    let guestAttendance = false;
+    if (typeof req.body.attendance === 'boolean') {
+        guestAttendance = req.body.attendance;
+    } else {
+        guestAttendance = req.body.attendance === 'yes' ? true : false;
+    }
+
     // prepate data
     const data = {
         email:  req.body.email,
         name: req.body.name,
-        attendance: req.body.attendance === 'true' ? true : false,
+        attendance: guestAttendance,
         note: req.body.note
-    }
+    };
 
-    const errors = rsvp.validate(data);
+    const validationDummyData = data;
+
+    console.log('before validation: ', data);
+    const errors = rsvp.validate(validationDummyData);
     console.log(data);
     console.log('errors: ', errors);
     console.log('errors length: ', errors.length);
