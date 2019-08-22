@@ -21,34 +21,8 @@ rsvp.use(bodyParser.json());
 // rsvp.use(cors({ origin: true }));
 // endpoints
 rsvp.post('/add', (req, res) => {
+    console.log(req.body);
     let rsvpsCollection = db.collection('rsvps');
-    let responseData = {
-        message: "RSVP successfully added.",
-        status: 200
-    };
-
-    // validators
-    const validateEmail = (val) => {
-        return emailValidator.validate(val);
-    }
-
-    // rsvp schema
-    const rsvp = new Schema({
-        email: {
-            type: String,
-            required: true,
-            use: { validateEmail }
-        },
-        name: {
-            type: String,
-            required: true,
-            use: { isNaN }
-        },
-        attendance: {
-            type: Boolean,
-            required: true
-        }
-    });
 
     let guestAttendance = false;
     if (typeof req.body.attendance === 'boolean') {
@@ -65,25 +39,29 @@ rsvp.post('/add', (req, res) => {
         note: req.body.note
     };
 
-    const validationDummyData = data;
-
-    console.log('before validation: ', data);
-    const errors = rsvp.validate(validationDummyData);
-    console.log(data);
-    console.log('errors: ', errors);
-    console.log('errors length: ', errors.length);
-
-    if(errors.length === 0) {
-         // insert to firestore
-        let result = rsvpsCollection.doc(data.email).set(data);
-        responseData.data = data;
-        responseData.result = result;
-    } else {
+    let responseData = {
+        message: "RSVP successfully added.",
+        status: 200
+    };
+    if (!emailValidator.validate(data.email)) {
         responseData.status = 400;
-        responseData.data = null;
-        responseData.errors = errors;
-        responseData.error = errors[0].message;
+        responseData.message = `Invalid email: ${data.email}`;
+        console.log(`Invalid email: ${data.email}`)
+        return res.status(responseData.status).send(responseData);
     }
+
+    if (!data.name && data.name === '') {
+        responseData.status = 400;
+        responseData.message = 'Name is required!';
+        return res.status(responseData.status).send(responseData);
+    }
+
+    // insert to firestore
+    console.log('inserting rsvp data...');
+    console.log(data);
+    let result = rsvpsCollection.doc(data.email).set(data);
+    responseData.firestoreResult = result;
+    console.log('doc result: ', result);
 
     res.status(responseData.status).send(responseData);
 });
