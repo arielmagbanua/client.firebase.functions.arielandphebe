@@ -3,7 +3,6 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const Schema = require('validate');
 const emailValidator = require("email-validator");
 
 // initialize
@@ -15,67 +14,52 @@ let db = admin.firestore();
  */
 const rsvp = express();
 // parse request body
-rsvp.use(bodyParser.json({ type: 'application/*+json' }));
 rsvp.use(bodyParser.urlencoded({extended: false}));
+rsvp.use(bodyParser.json());
 // Automatically allow cross-origin requests
-// rsvp.use(cors({ origin: true }));
+rsvp.use(cors({ origin: true }));
 // endpoints
-rsvp.post('/send', (req, res) => {
+rsvp.post('/add', (req, res) => {
     let rsvpsCollection = db.collection('rsvps');
-    let responseData = {
-        message: "RSVP successfully added.",
-        status: 200
-    };
 
-    // validators
-    const validateEmail = (val) => {
-        return emailValidator.validate(val);
+    let guestAttendance = false;
+    if (typeof req.body.attendance === 'boolean') {
+        guestAttendance = req.body.attendance;
+    } else {
+        guestAttendance = req.body.attendance === 'yes' ? true : false;
     }
-
-    // rsvp schema
-    const rsvp = new Schema({
-        email: {
-            type: String,
-            required: true,
-            use: { validateEmail }
-        },
-        name: {
-            type: String,
-            required: true,
-            use: { isNaN }
-        },
-        attendance: {
-            type: Boolean,
-            required: true
-        }
-    });
 
     // prepate data
     const data = {
         email:  req.body.email,
         name: req.body.name,
-        attendance: req.body.attendance === 'true' ? true : false,
+        attendance: guestAttendance,
         note: req.body.note
-    }
+    };
 
-    const errors = rsvp.validate(data);
-    console.log(data);
-    console.log('errors: ', errors);
-    console.log('errors length: ', errors.length);
-
-    if(errors.length === 0) {
-         // insert to firestore
-        let result = rsvpsCollection.doc(data.email).set(data);
-        responseData.data = data;
-        responseData.result = result;
-    } else {
+    let responseData = {
+        message: "RSVP successfully added.",
+        status: 200
+    };
+    if (!emailValidator.validate(data.email)) {
         responseData.status = 400;
-        responseData.data = null;
-        responseData.errors = errors;
-        responseData.error = errors[0].message;
+        responseData.message = `Invalid email: ${data.email}`;
+        console.log(`Invalid email: ${data.email}`)
+        return res.status(responseData.status).send(responseData);
     }
 
-    res.status(responseData.status).send(responseData);
+    if (!data.name && data.name === '') {
+        responseData.status = 400;
+        responseData.message = 'Name is required!';
+        return res.status(responseData.status).send(responseData);
+    }
+
+    // insert to firestore
+    console.log('inserting rsvp data...');
+    console.log(data);
+    rsvpsCollection.doc(data.email).set(data);
+
+    return res.status(responseData.status).send(responseData);
 });
 
 exports.rsvp = functions.region('asia-east2').https.onRequest(rsvp);
