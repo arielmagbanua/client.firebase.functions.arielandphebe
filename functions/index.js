@@ -20,7 +20,6 @@ rsvp.use(bodyParser.json());
 rsvp.use(cors({ origin: true }));
 // endpoints
 rsvp.post('/add', (req, res) => {
-    console.log(req.body);
     let rsvpsCollection = db.collection('rsvps');
 
     let guestAttendance = false;
@@ -62,7 +61,7 @@ rsvp.post('/add', (req, res) => {
     responseData.firestoreResult = result;
     console.log('doc result: ', result);
 
-    res.status(responseData.status).send(responseData);
+    return res.status(responseData.status).send(responseData);
 });
 
 exports.rsvp = functions.region('asia-east2').https.onRequest(rsvp);
