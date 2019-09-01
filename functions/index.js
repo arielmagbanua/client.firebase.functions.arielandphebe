@@ -3,7 +3,6 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const Schema = require('validate');
 const emailValidator = require("email-validator");
 
 // initialize
@@ -18,7 +17,7 @@ const rsvp = express();
 rsvp.use(bodyParser.urlencoded({extended: false}));
 rsvp.use(bodyParser.json());
 // Automatically allow cross-origin requests
-// rsvp.use(cors({ origin: true }));
+rsvp.use(cors({ origin: true }));
 // endpoints
 rsvp.post('/add', (req, res) => {
     console.log(req.body);
