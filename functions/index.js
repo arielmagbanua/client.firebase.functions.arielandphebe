@@ -57,9 +57,7 @@ rsvp.post('/add', (req, res) => {
     // insert to firestore
     console.log('inserting rsvp data...');
     console.log(data);
-    let result = rsvpsCollection.doc(data.email).set(data);
-    responseData.firestoreResult = result;
-    console.log('doc result: ', result);
+    rsvpsCollection.doc(data.email).set(data);
 
     return res.status(responseData.status).send(responseData);
 });
