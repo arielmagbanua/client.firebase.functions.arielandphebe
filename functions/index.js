@@ -38,7 +38,7 @@ rsvp.post('/add', (req, res) => {
     };
 
     let responseData = {
-        message: "RSVP successfully added.",
+        message: "RSVP successfully added. Thank you for responding.",
         status: 200
     };
     if (!emailValidator.validate(data.email)) {
@@ -57,9 +57,15 @@ rsvp.post('/add', (req, res) => {
     // insert to firestore
     console.log('inserting rsvp data...');
     console.log(data);
-    rsvpsCollection.doc(data.email).set(data);
-
-    return res.status(responseData.status).send(responseData);
+    return rsvpsCollection.doc(data.email).set(data).then((result) => {
+        console.log(result);
+        return res.status(responseData.status).send(responseData);
+    }).catch((error) => {
+        console.log(error);
+        responseData.status = 400;
+        responseData.message = 'Failed to save the RSVP!';
+        return res.status(responseData.status).send(responseData);
+    })
 });
 
 exports.rsvp = functions.region('asia-east2').https.onRequest(rsvp);
