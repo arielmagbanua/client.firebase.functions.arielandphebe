@@ -159,22 +159,7 @@ social.post('/twitter/:hashTag', async (req, res) => {
         // insert or update first the user
         let twitterUser = tweet.user;
 
-        // let storedTwitterUser = await usersCollection.where('type', '==', 'twitter')
-        //     .where('account_id', '==', twitterUser.id)
-        //     .get()
-        //     .then((userSnapShot) => {
-        //         if (!userSnapShot.empty) {
-        //             console.log(userSnapShot.data());
-        //             return userSnapShot.data();
-        //         }
-
-        //         return null;
-        //     });
-
         let storedTwitterUser = await usersCollection.doc(twitterUser.id);
-        
-        console.log('stored user!');
-        console.log(storedTwitterUser);
 
         let userData = {
             id: twitterUser.id,
@@ -186,7 +171,6 @@ social.post('/twitter/:hashTag', async (req, res) => {
         };
 
         if (storedTwitterUser) {
-            console.log('twitter_user_id: ' + storedTwitterUser.id);
             // update
             twitterUser = await usersCollection.doc(storedTwitterUser.id)
                 .set(userData)
@@ -194,13 +178,10 @@ social.post('/twitter/:hashTag', async (req, res) => {
                     return storedTwitterUser;
                 });
         } else {
-            console.log('new user!');
-            console.log(userData);
             twitterUser = await usersCollection.add(userData)
                 .then((userDoc) => userDoc);
         }
-        
-        console.log('inserting... '+tweet.id.toString());
+
         await tweetCollection.doc(tweet.id.toString())
             .set({
                 post_id: tweet.id,
@@ -208,15 +189,6 @@ social.post('/twitter/:hashTag', async (req, res) => {
                 media: tweet.media,
                 owner: usersCollection.doc(`${twitterUser.id}`)
             })
-
-        // insert the tweet
-        // await tweetCollection.add({
-        //     post_id: tweet.id,
-        //     text: tweet.text,
-        //     media: tweet.media,
-        //     owner: usersCollection.doc(`${twitterUser.id}`)
-        // })
-        //     .then((tweetDoc) => console.log('inserted tweet!', tweetDoc));
     });
 
     await res.json({
