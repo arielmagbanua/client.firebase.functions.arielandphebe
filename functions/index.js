@@ -98,8 +98,11 @@ social.use(cors({ origin: true }));
 // });
 
 social.post('/twitter/:hashTag', async (req, res) => {
+    // https://api.twitter.com/1.1/search/tweets.json?q=%23phebeisyursariel&result_type=mixed&until=2020-12-24
+
     const hashTag = req.params.hashTag;
-    const requestUrl = `https://api.twitter.com/1.1/search/tweets.json?q=%23${hashTag}&result_type=mixed`;
+    // const requestUrl = `https://api.twitter.com/1.1/search/tweets.json?q=%23${hashTag}&result_type=mixed`;
+    const requestUrl = 'https://api.twitter.com/1.1/search/tweets.json?q=%23' + hashTag + '&result_type=mixed&until=2020-12-24';
 
     // bearer token should be retrieve in db
     let statusCollection = db.collection('statuses');
@@ -134,7 +137,7 @@ social.post('/twitter/:hashTag', async (req, res) => {
 				}
 
 				return {
-					id: tweet.id,
+					id: tweet.id_str,
 					text: tweet.text,
 					media: media,
 					user: {
@@ -192,7 +195,7 @@ social.post('/twitter/:hashTag', async (req, res) => {
     });
 
     await res.json({
-        processed: twitterPosts.length
+        processed: twitterPosts
     });
 });
 
