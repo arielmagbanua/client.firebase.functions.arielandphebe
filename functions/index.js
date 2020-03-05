@@ -97,9 +97,15 @@ social.use(cors({ origin: true }));
 //         });
 // });
 
+const aiVision = express();
+const vision = require('@google-cloud/vision');
+
 social.post('/twitter/:hashTag', async (req, res) => {
+    // https://api.twitter.com/1.1/search/tweets.json?q=%23phebeisyursariel&result_type=mixed&until=2020-12-24
+
     const hashTag = req.params.hashTag;
-    const requestUrl = `https://api.twitter.com/1.1/search/tweets.json?q=%23${hashTag}&result_type=mixed`;
+    // const requestUrl = `https://api.twitter.com/1.1/search/tweets.json?q=%23${hashTag}&result_type=mixed`;
+    const requestUrl = 'https://api.twitter.com/1.1/search/tweets.json?q=%23' + hashTag + '&result_type=mixed&until=2020-12-24';
 
     // bearer token should be retrieve in db
     let statusCollection = db.collection('statuses');
@@ -134,7 +140,7 @@ social.post('/twitter/:hashTag', async (req, res) => {
 				}
 
 				return {
-					id: tweet.id,
+					id: tweet.id_str,
 					text: tweet.text,
 					media: media,
 					user: {
@@ -156,6 +162,8 @@ social.post('/twitter/:hashTag', async (req, res) => {
         
     // store or update the tweets
     await twitterPosts.forEach(async (tweet) => {
+        tweet.appropriate = await safeSearchMedia(tweet.media);
+
         // insert or update first the user
         let twitterUser = tweet.user;
 
@@ -187,15 +195,73 @@ social.post('/twitter/:hashTag', async (req, res) => {
                 post_id: tweet.id,
                 text: tweet.text,
                 media: tweet.media,
-                owner: usersCollection.doc(`${twitterUser.id}`)
-            })
+                owner: usersCollection.doc(`${twitterUser.id}`),
+                appropriate: tweet.appropriate
+            });
     });
 
     await res.json({
-        processed: twitterPosts.length
+        processed: twitterPosts
+    });
+});
+
+/**
+ * Do search
+ *
+ * @param {array} media Tweet media
+ */
+async function safeSearchMedia(media) {
+    let result = true;
+    await media.forEach(async (image) => {
+        let aiResult = await visionSafeSearch(image);
+        let annotations = aiResult.safeSearchAnnotation;
+        if (aiResult) {
+            result = annotations.adult === 'VERY_UNLIKELY' &&
+                annotations.spoof === 'VERY_UNLIKELY' &&
+                annotations.medical === 'VERY_UNLIKELY' &&
+                annotations.violence === 'VERY_UNLIKELY' &&
+                annotations.racy === 'VERY_UNLIKELY' &&
+                annotations.adultConfidence === 0 &&
+                annotations.spoofConfidence === 0 &&
+                annotations.medicalConfidence === 0 &&
+                annotations.violenceConfidence === 0 &&
+                annotations.racyConfidence === 0 &&
+                annotations.nsfwConfidence === 0;
+            if (!result) {
+                // break the loop immediately
+                return result;
+            }
+        }
+    });
+
+    return result;
+}
+
+/**
+ * Executes safe search detection API.
+ *
+ * @param {string} image Image path or url.
+ * @returns {object} safe search result.
+ */
+async function visionSafeSearch(image) {
+    const client = new vision.ImageAnnotatorClient();
+    const [result] = await client.safeSearchDetection(image);
+    return result;
+}
+
+aiVision.post('/ai/test', async (req, res) => {
+    // const client = new vision.ImageAnnotatorClient();
+    // const fileName = 'https://pbs.twimg.com/media/EPMIJ3XVUAAla0s?format=jpg&name=4096x4096';
+    // const [result] = await client.safeSearchDetection(fileName);
+
+    const result = await safeSearchMedia(['https://pbs.twimg.com/media/EPMIJ3XVUAAla0s?format=jpg&name=4096x4096']);
+
+    return res.json({
+        mediaResult: result
     });
 });
 
 // export the functions
 exports.rsvp = functions.region('asia-east2').https.onRequest(rsvp);
 exports.social = functions.region('asia-east2').https.onRequest(social);
+exports.vision = functions.region('asia-east2').https.onRequest(aiVision);
